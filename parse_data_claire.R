@@ -31,8 +31,9 @@ dev.off()
 
 png("Number_of_nest_per_indivs.png",res=300, units = "cm", width=30, height = 15)
 # Number of nests visited by each individuals: 
-dat %>% mutate(date=as.Date(date,format ="%m/%d/%Y")) %>% filter(nuit>4) %>% regroup(list("site_mission", "indiv","sexe")) %>% summarise(n=n()) %>% ggplot() + geom_histogram(aes(x=n,fill = sexe),position = "dodge") + xlab("number of differents nests visited by individuals") + mytheme + theme(axis.text.x = element_text(angle = 0,hjust=0.5))
+dat %>% mutate(date=as.Date(date,format ="%m/%d/%Y")) %>% filter(nuit>4) %>% regroup(list("site_mission", "indiv","sexe")) %>% summarise(n=n_distinct(NS_name_mission)) %>% ggplot() + geom_histogram(aes(x=n,fill = sexe),position = "dodge") + xlab("number of differents nests visited by individuals") + mytheme + theme(axis.text.x = element_text(angle = 0,hjust=0.5))
 dev.off()
+
 
 
 
@@ -43,11 +44,26 @@ dev.off()
 
 
 
-# Same but with a correction for area size 
-dat %>% mutate(date=as.Date(date,format ="%m/%d/%Y")) %>% filter(nuit>4) %>% group_by(site_mission) %>% summarise(area= (max(x) - min(x)) * (max(y) - min(y)) ) %>% inner_join(dat,by="site_mission") %>% regroup(list("geography","area","site_mission","indiv")) %>% summarise(d = mean(dist(cbind(x,y))) ) %>% mutate(dcor = d / area ) 
+## Same but with a correction for area size 
+#dat %>% mutate(date=as.Date(date,format ="%m/%d/%Y")) %>% filter(nuit>4) %>% group_by(site_mission) %>% summarise(area= (max(x) - min(x)) * (max(y) - min(y)) ) %>% inner_join(dat,by="site_mission") %>% regroup(list("geography","area","site_mission","indiv")) %>% summarise(d = mean(dist(cbind(x,y))) ) %>% mutate(dcor = d / area ) 
+#
+
+dat %>% mutate(date=as.Date(date,format ="%m/%d/%Y")) %>% filter(nuit>4) %>% regroup(list("site_mission","indiv")) %>% summarise(NS_dist = n_distinct(NS_name_mission)) %>% ggplot() + geom_histogram(aes(x=NS_dist)) + mytheme 
 
 
-dat %>% filter(indiv=="F414")
+# Here we get the list, for each site and for each indivs, of all the nests (NS) (plotted previoulsy by sex)
+
+tmp = dat %>% mutate(date=as.Date(date,format ="%m/%d/%Y")) %>% filter(nuit>4) %>% select(site_mission,indiv,NS_name_mission,x,y) %>% unique  %>% regroup(list("site_mission", "indiv")) 
+
+# We write here a file to treat in python (dist_pair.py) because R is not practical for this task.
+
+write.table(tmp, file = "NS_indiv_data.txt", sep =",",row.names=F,col.names=F,quote=F)
+
+NSindivdat = read.table("distance_NS_pairwise_per_indiv.txt")
+colnames(NSindivdat) = c("indiv","NS_name_mission","NS1/NS2","x1","y1","x2","y2")
+head(NSindivdat)
+NSindivdat %>% mutate(distance = dist(rbind(c(x1,x2),c(y1,y2)))) %>% head
+
 
 
 
